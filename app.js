@@ -150,11 +150,21 @@
 
     // auto-advance slides as Ada plays (even split across the track)
     if (slidesApi.total > 1) {
-      au.addEventListener("timeupdate", function () {
+      var syncSlide = function () {
         if (!au.duration || !isFinite(au.duration)) return;
         var per = au.duration / slidesApi.total;
         slidesApi.goTo(Math.min(slidesApi.total - 1, Math.floor(au.currentTime / per)));
+      };
+      au.addEventListener("timeupdate", syncSlide);
+      // belt-and-suspenders: also tick while playing (timeupdate can be throttled)
+      var ticker = null;
+      au.addEventListener("play", function () {
+        if (ticker) clearInterval(ticker);
+        ticker = setInterval(syncSlide, 400);
       });
+      var stopTick = function () { if (ticker) { clearInterval(ticker); ticker = null; } };
+      au.addEventListener("pause", stopTick);
+      au.addEventListener("ended", stopTick);
     }
 
     // lesson
