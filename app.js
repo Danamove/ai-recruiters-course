@@ -53,13 +53,19 @@
     var wrap = document.createElement("div");
     wrap.className = "slides";
 
-    if (m.slides && m.slides.length) {
+    var deck = (window.SLIDES || {})[m.num] || [];   // inline HTML slides
+    var imgs = m.slides || [];                         // exported slide images
+
+    if (deck.length || imgs.length) {
+      var useHtml = deck.length > 0;
+      var total = useHtml ? deck.length : imgs.length;
       var idx = 0;
+
       var stage = document.createElement("div");
-      stage.className = "slides-stage";
-      var img = document.createElement("img");
-      img.alt = "Slide";
-      stage.appendChild(img);
+      stage.className = "slides-stage" + (useHtml ? " html" : "");
+      var holder = document.createElement(useHtml ? "div" : "img");
+      if (useHtml) holder.className = "slide-holder"; else holder.alt = "Slide";
+      stage.appendChild(holder);
 
       var bar = document.createElement("div");
       bar.className = "slides-bar";
@@ -70,13 +76,15 @@
       var open = mkLink("Open in Gamma ↗", m.gammaUrl, "btn btn-sm btn-ghost");
 
       function paint() {
-        img.src = m.slides[idx];
-        count.textContent = "Slide " + (idx + 1) + " / " + m.slides.length;
+        if (useHtml) holder.innerHTML = deck[idx];
+        else holder.src = imgs[idx];
+        count.textContent = "Slide " + (idx + 1) + " / " + total;
         prev.disabled = idx === 0;
-        next.disabled = idx === m.slides.length - 1;
+        next.disabled = idx === total - 1;
+        stage.scrollTop = 0;
       }
       prev.onclick = function () { if (idx > 0) { idx--; paint(); } };
-      next.onclick = function () { if (idx < m.slides.length - 1) { idx++; paint(); } };
+      next.onclick = function () { if (idx < total - 1) { idx++; paint(); } };
 
       bar.appendChild(prev);
       bar.appendChild(count);
