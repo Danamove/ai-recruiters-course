@@ -26,7 +26,17 @@ python build.py
 
 Re-run after editing any lesson, narration audio, or after exporting slide images.
 
+## Inline slides
+
+Gamma decks cannot be iframe-embedded (`X-Frame-Options: SAMEORIGIN`), so slides are rendered as native inline HTML.
+
+- `data/gamma-raw/module-NN.html` — each deck's content, saved from Gamma's `read_gamma`.
+- `build-slides.py` — parses those into `data/slides.js` (`window.SLIDES`). Needs `pip install beautifulsoup4`.
+- The player shows a prev/next slideshow per module. Images are hotlinked from Gamma's public CDN.
+
+To refresh a deck after editing it in Gamma: re-pull its content into the matching `data/gamma-raw/module-NN.html`, then `python build-slides.py`.
+
 ## Known MVP limits
 
-- Gamma decks cannot be embedded inline (Gamma sends `X-Frame-Options: SAMEORIGIN`), so slides open in a new Gamma tab. For true inline slides, export each deck to images into `assets/slides/module-NN/` and rebuild.
 - Slides are learner-advanced, not auto-synced to the audio.
+- Slide images are hotlinked from Gamma's CDN; if Gamma removes them, re-pull the decks.
