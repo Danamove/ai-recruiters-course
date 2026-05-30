@@ -49,9 +49,11 @@
   }
 
   /* ---------- slide panel ---------- */
-  function slidePanel(m) {
+  function slidePanel(m, opts) {
+    opts = opts || {};
     var wrap = document.createElement("div");
     wrap.className = "slides";
+    var api = { wrap: wrap, total: 0, goTo: function () {} };
 
     var deck = (window.SLIDES || {})[m.num] || [];   // inline HTML slides
     var imgs = m.slides || [];                         // exported slide images
@@ -83,8 +85,8 @@
         next.disabled = idx === total - 1;
         stage.scrollTop = 0;
       }
-      prev.onclick = function () { if (idx > 0) { idx--; paint(); } };
-      next.onclick = function () { if (idx < total - 1) { idx++; paint(); } };
+      prev.onclick = function () { if (idx > 0) { idx--; paint(); if (opts.onManual) opts.onManual(idx, total); } };
+      next.onclick = function () { if (idx < total - 1) { idx++; paint(); if (opts.onManual) opts.onManual(idx, total); } };
 
       bar.appendChild(prev);
       bar.appendChild(count);
@@ -94,6 +96,8 @@
       wrap.appendChild(stage);
       wrap.appendChild(bar);
       paint();
+      api.total = total;
+      api.goTo = function (i) { i = Math.max(0, Math.min(total - 1, i)); if (i !== idx) { idx = i; paint(); } };
     } else {
       var stage2 = document.createElement("div");
       stage2.className = "slides-stage";
@@ -110,7 +114,7 @@
       wrap.appendChild(stage2);
       wrap.appendChild(bar2);
     }
-    return wrap;
+    return api;
   }
 
   /* ---------- module view ---------- */
@@ -121,19 +125,37 @@
     v.appendChild(el('<p class="eyebrow">Module ' + m.num + '</p>'));
     v.appendChild(el('<h1>' + escapeHtml(m.title) + '</h1>'));
 
-    v.appendChild(slidePanel(m));
+    var au = document.createElement("audio");
+    au.controls = true; au.preload = "none"; au.src = m.audio;
 
-    // audio
+    // slides; manual nav seeks the audio to that slide's position (two-way lock)
+    var slidesApi = slidePanel(m, {
+      onManual: function (i, total) {
+        if (au.duration && isFinite(au.duration) && total) {
+          au.currentTime = (i / total) * au.duration;
+        }
+      }
+    });
+    v.appendChild(slidesApi.wrap);
+
+    // audio card
     var audio = document.createElement("div");
     audio.className = "audio-card";
     audio.innerHTML =
       '<div class="ada-badge">A</div>' +
       '<div class="audio-meta"><span class="who">Narrated by Ada</span>' +
-      '<span class="sub">AI voice · module ' + m.num + '</span></div>';
-    var au = document.createElement("audio");
-    au.controls = true; au.preload = "none"; au.src = m.audio;
+      '<span class="sub">AI voice · slides follow automatically</span></div>';
     audio.appendChild(au);
     v.appendChild(audio);
+
+    // auto-advance slides as Ada plays (even split across the track)
+    if (slidesApi.total > 1) {
+      au.addEventListener("timeupdate", function () {
+        if (!au.duration || !isFinite(au.duration)) return;
+        var per = au.duration / slidesApi.total;
+        slidesApi.goTo(Math.min(slidesApi.total - 1, Math.floor(au.currentTime / per)));
+      });
+    }
 
     // lesson
     var lesson = document.createElement("div");
